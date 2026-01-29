@@ -1,0 +1,4 @@
+https://github.com/bitcraze/crazyflie-clients-python
+https://github.com/bitcraze/crazyflie-lib-python
+https://github.com/bitcraze/crazyflie-testing
+https://github.com/bitcraze/crazyflie-simulation
