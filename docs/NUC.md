@@ -8,18 +8,15 @@ This document is the **deep technical documentation** for the **Nuc** subsystem 
 > Unity is a viewer + orchestrator.
 > Nuc is the clock + truth + dataset generator.
 
----
-
 ## 0. Where this fits in Apis
 
 The Apis README frames the overall roadmap (e.g., Nuc → Waggle → Propolis → Scopa → Proboscis).
 Nuc specifically provides the deterministic substrate for controller + data generation (and later: learning from logs).
 
----
-
 ## 1. Process architecture (Unity ↔ Nuc)
 
 Nuc is implemented as a **separate Python process** that:
+
 1) exposes a **WebSocket control endpoint** (Unity → Nuc), and
 2) optionally streams **UDP telemetry** (Nuc → Unity) for best-effort visualization.
 
@@ -46,10 +43,9 @@ sequenceDiagram
 ```
 
 Key points:
+
 - **Determinism lives in Nuc** (fixed `dt`, seeded RNG, single-authority loop).
 - **Unity doesn’t “drive” time**; it only *samples* state via UDP and triggers runs via WS.
-
----
 
 ## 2. The control surface: what Unity sends vs what the controller does
 
@@ -171,15 +167,15 @@ Example RunConfig (StreamingAssets/RunConfig.json):
 }
 ```
 
----
-
 ## 3. Files + responsibilities
 
 ### Python
+
 - **controller.py**  
   WebSocket server + episode runner for a **3D toy quad** with a **cascaded controller**, fixed-step simulation, CSV logging, and optional UDP telemetry.
 
 ### Unity (C#)
+
 - **PythonControllerProcess.cs** — start/stop the Python process (controller.py), capture stdout/stderr, and raise an exit event.
 - **UnityControlClient.cs** — WebSocket client for sending RunConfig and reading ACK/DONE messages.
 - **ControllerOrchestrator.cs** — high-level glue: start controller, poll readiness, send RunConfig, track state.
@@ -191,21 +187,18 @@ Example RunConfig (StreamingAssets/RunConfig.json):
 - **LookAtTarget.cs** — camera convenience.
 - **ControllerState.cs** — enum for orchestrator state machine.
 
----
-
 # Part A — Python (controller.py): Implementation Reference
 
 ## A1. High-level contract
 
 The python process:
+
 - listens on `ws://HOST:PORT` (default `127.0.0.1:7361`)
 - accepts exactly one `START` message
 - runs a deterministic episode with fixed dt
 - writes a CSV log
 - optionally streams UDP telemetry snapshots
 - responds with `DONE` + summary and exits
-
----
 
 ## A2. Core math helpers
 
@@ -215,21 +208,18 @@ The python process:
 - `rpy_to_rotmat(roll, pitch, yaw)`: ZYX rotation; used for thrust direction
 - `rotmat_to_quat(R)`: telemetry quaternion for Unity
 
----
-
 ## A3. State and IO dataclasses
 
 - `QuadState`: position/velocity + roll/pitch/yaw
 - `ControlOut`: roll/pitch/yaw_rate + thrust commands
 - `RefOut`: reference position + yaw
 
----
-
 ## A4. Reference program (what “flies” the vehicle)
 
 `ReferenceProgram` produces targets for the controller so we can generate diverse datasets *without* a human pilot.
 
 Key methods:
+
 - `__init__(flight_plan, rng)`: seeded randomness for reproducible “random” segments
 - `reset()`: restart flight plan
 - `step(t, dt, state)`: outputs `p_ref` and `yaw_ref` based on segment type
@@ -237,22 +227,20 @@ Key methods:
 Supported segment patterns include: `hover`, `random_steps`, `circle`.
 If the plan ends, it defaults to “hover at current position”.
 
----
-
 ## A5. Cascaded controller (engineered control, not learned)
 
 `CascadedController` is a classic “outer-loop position → inner-loop attitude” structure:
+
 - position/velocity PD → desired acceleration
 - map desired acceleration → roll/pitch + thrust (with tilt limits)
 - yaw P → yaw-rate command (with rate limit)
 
 This is the sort of black box your colleague is trying to learn from closed-source drones — except here we control it and can generate perfectly labeled pairs.
 
----
-
 ## A6. Dynamics: toy, but drone-like
 
 `ToyQuadDynamics` implements:
+
 - gravity
 - linear drag
 - first-order tracking for roll/pitch (time constants)
@@ -262,11 +250,10 @@ This is the sort of black box your colleague is trying to learn from closed-sour
 
 This is not full rigid-body physics — it is “controller-shaped” dynamics that are stable, deterministic, and easy to learn from.
 
----
-
 ## A7. Episode runner: fixed-step + logging + telemetry
 
 `run_episode(cfg)`:
+
 - validates required keys
 - seeds RNG
 - creates reference program + controller + dynamics
@@ -275,13 +262,9 @@ This is not full rigid-body physics — it is “controller-shaped” dynamics t
 - optionally sends UDP telemetry snapshots at `telemetry.rate_hz`
 - optionally wall-clock throttles if `real_time=true`
 
----
-
 ## A8. WebSocket server (one-shot)
 
 `handler(ws)`: receive RunConfig → ACK → run → DONE → stop loop (process exits).
-
----
 
 # Part B — Unity: Script-by-script behavior
 
@@ -290,6 +273,7 @@ This is not full rigid-body physics — it is “controller-shaped” dynamics t
 Role: Launch Python, poll WebSocket readiness, send RunConfig, track state.
 
 Methods:
+
 - `OnEnable/OnDisable`: subscribe Input System actions
 - `Start/OnDestroy`: subscribe/unsubscribe process exit event
 - `HandleControllerExited`: sets `State=Exited`
@@ -298,54 +282,49 @@ Methods:
 - `UI_StartController/UI_StartSimulation`: button-friendly entry points
 
 Why you saw two status strings:
+
 - one comes from `ControllerStatusUI` (prints `State`)
 - the other is `LastStatusMessage` (human string you *can* display)
-
----
 
 ## B2. PythonControllerProcess.cs
 
 Role: Start/stop `controller.py` as an OS process and surface stdout/stderr in the Unity Console.
 
 Key methods:
+
 - `StartController()`: validates paths, starts process, begins async reads
 - `StopController()`: best-effort stop via `Kill()`
 - `OnProcessExited(...)`: raises `OnControllerExited`
-
----
 
 ## B3. UnityControlClient.cs
 
 Role: WebSocket client.
 
 Key methods:
+
 - `TryConnectAsync()`: connect wrapper returning `bool`
 - `ConnectAsync()/DisconnectAsync()`
 - `SendTextAsync(message, readReply)`
 - `ReceiveTextAsync()`: frame-join until end-of-message
-
----
 
 ## B4. UdpTelemetryReceiver.cs
 
 Role: Background-thread UDP receiver with “latest-only” semantics (drop-friendly).
 
 Key methods:
+
 - `StartReceiver()/StopReceiver()`
 - `ReceiveLoop()`
 - `TryGetLatest(out pkt)`
-
----
 
 ## B5. TelemetryPoseApplier.cs
 
 Role: Apply pose to a target transform from UDP telemetry.
 
 Key methods:
+
 - `Update()`: map sim → Unity coordinates; optional smoothing
 - `ConvertSimToUnityRotation(qSim)`: basis conversion
-
----
 
 ## B6. PropellerSpinFromTelemetry.cs
 
@@ -359,51 +338,43 @@ x = Mathf.Pow(x, 0.5f); // boosts low values
 float rpmTarget = Mathf.Lerp(minRpm, maxRpm, x);
 ```
 
----
-
 ## B7. ControllerStatusUI.cs
 
 Role: Show orchestrator state with TMP text + color mapping.
-
----
 
 ## B8. ControllerUIButtonState.cs
 
 Role: Enable/disable UI buttons based on orchestrator state.
 
----
-
 ## B9/B10. SendToPythonOnAction.cs + SendJsonFileToPythonOnAction.cs
 
 Role: Direct-senders driven by Input System actions (still handy for quick tests).
-
----
 
 ## B11. LookAtTarget.cs
 
 Role: Camera look-at helper.
 
----
-
 # Part C — Notes, gotchas, and next decisions
 
 ## C1. One-shot server semantics
+
 Current `controller.py` exits after one run — consistent with your preference to restart each time.
 
 ## C2. Real-time vs as-fast-as-possible
+
 - `real_time=false`: dataset generation
 - `real_time=true`: interactive viewing + stable pacing
 
 ## C3. Python performance
+
 For one quad at small `dt`, Python + NumPy is fine.
 If you later need massive batched rollouts, port to JAX (GPU) and keep the same run-config contract.
 
 ## C4. UDP “latest-only” is intentional
+
 Unity never accumulates backpressure; it always shows the freshest state.
 
----
-
-# Appendix — Quick reference diagrams
+## Appendix — Quick reference diagrams
 
 ```mermaid
 flowchart LR

@@ -218,6 +218,9 @@ public class ControllerOrchestrator : MonoBehaviour
                 if (msg == "<server closed>")
                 {
                     LastStatusMessage = "Controller socket closed";
+                    IsControllerReady = false;
+                    State = ControllerState.Exited;
+                    await wsClient.DisconnectAsync();
                     break;
                 }
 
@@ -239,6 +242,9 @@ public class ControllerOrchestrator : MonoBehaviour
                 if (reply.type == "DONE")
                 {
                     LastStatusMessage = $"DONE. Log: {reply.summary?.log_path}";
+                    IsControllerReady = false;
+                    State = ControllerState.Exited;
+                    await wsClient.DisconnectAsync();
                     // The Python controller exits after DONE in your current design; process-exit
                     // will be handled via OnControllerExited.
                     break;
