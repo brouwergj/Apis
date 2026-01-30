@@ -30,7 +30,24 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-unity/
+*.blend
+*.blend1
+*.usd
+*.png
+*.exr
+*.csv
+
+**/unity/Assets/Textures
+**/unity/Assets/Shared
+**/unity/Assets/Prefabs
+**/unity/Assets/Imports
+**/unity/Assets/Materials
+**/unity/Assets/ThirdParty
+**/unity/Library
+**/unity/Logs
+**/unity/ProjectSettings
+**/unity/Temp
+**/unity/UserSettings
 
 # Virtual environments
 .env
