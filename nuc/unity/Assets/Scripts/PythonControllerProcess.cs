@@ -23,6 +23,8 @@ public class PythonControllerProcess : MonoBehaviour
     private Process _process;
     public event Action OnControllerExited;
 
+    public bool IsRunning => _process != null && !_process.HasExited;
+
     private void Start()
     {
         if (autoStartOnPlay)

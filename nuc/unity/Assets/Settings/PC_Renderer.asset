@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03e69992e022fa14b83df3a22c281e6e, type: 3}
   m_Name: EdgeDetection
   m_EditorClassIdentifier: Assembly-CSharp::EdgeDetection
-  m_Active: 1
+  m_Active: 0
   settings:
     renderPassEvent: 500
     outlineThickness: 1

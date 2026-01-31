@@ -1,0 +1,115 @@
+{
+  "type": "START",
+  "run_id": "ep_yaw_heavy",
+  "real_time": true,
+  "seed": 404,
+  "dt": 0.01,
+  "duration_s": 30.0,
+  "init": {
+    "pos_box": {
+      "x": [
+        -0.3,
+        0.3
+      ],
+      "y": [
+        -0.3,
+        0.3
+      ],
+      "z": [
+        0.9,
+        1.3
+      ]
+    },
+    "vel_box": {
+      "x": [
+        -0.05,
+        0.05
+      ],
+      "y": [
+        -0.05,
+        0.05
+      ],
+      "z": [
+        -0.05,
+        0.05
+      ]
+    },
+    "yaw_deg": [
+      0,
+      360
+    ]
+  },
+  "flight_plan": [
+    {
+      "type": "hover",
+      "duration_s": 3.0,
+      "pos": [
+        0,
+        0,
+        1.1
+      ],
+      "yaw_mode": "hold"
+    },
+    {
+      "type": "random_steps",
+      "duration_s": 22.0,
+      "bounds": {
+        "x": [
+          -1.0,
+          1.0
+        ],
+        "y": [
+          -1.0,
+          1.0
+        ],
+        "z": [
+          0.8,
+          1.6
+        ]
+      },
+      "hold_s": [
+        1.0,
+        2.0
+      ],
+      "yaw_step_prob": 0.9,
+      "yaw_step_deg": [
+        -180,
+        180
+      ]
+    },
+    {
+      "type": "circle",
+      "duration_s": 5.0,
+      "center": [
+        0,
+        0,
+        1.1
+      ],
+      "radius": 0.5,
+      "omega": 0.6,
+      "yaw_mode": "hold"
+    }
+  ],
+  "logging": {
+    "format": "csv",
+    "out_dir": "..\\\\logs\\\\crazyflie_controller",
+    "fields": "full"
+  },
+  "telemetry": {
+    "enabled": true,
+    "rate_hz": 60,
+    "udp_host": "127.0.0.1",
+    "udp_port": 15000,
+    "payload": "pose_vel"
+  },
+  "controller": {
+    "type": "crazyflie_controller"
+  },
+  "dynamics": {
+    "tau_roll": 0.08,
+    "mass": 0.029,
+    "drag_coeff": 0.08,
+    "tau_thrust": 0.05,
+    "tau_pitch": 0.08
+  }
+}

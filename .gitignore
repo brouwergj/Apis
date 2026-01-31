@@ -7,9 +7,9 @@ __pycache__/
 
 # C extensions
 *.dll
-
 # Distribution / packaging
 .Python
+blender/
 crazyflie/
 build/
 develop-eggs/

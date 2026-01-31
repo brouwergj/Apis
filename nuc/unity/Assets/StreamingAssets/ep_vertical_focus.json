@@ -1,0 +1,43 @@
+{
+  "type": "START",
+  "run_id": "ep_vertical_focus",
+  "real_time": true,
+  "seed": 303,
+  "dt": 0.01,
+  "duration_s": 30.0,
+  "init": {
+    "pos_box": { "x": [-0.3, 0.3], "y": [-0.3, 0.3], "z": [0.6, 1.0] },
+    "vel_box": { "x": [-0.05, 0.05], "y": [-0.05, 0.05], "z": [-0.15, 0.15] },
+    "yaw_deg": [0, 360]
+  },
+  "flight_plan": [
+    {
+      "type": "hover",
+      "duration_s": 2.0,
+      "pos": [0, 0, 0.9],
+      "yaw_mode": "hold"
+    },
+    {
+      "type": "random_steps",
+      "duration_s": 22.0,
+      "bounds": { "x": [-0.6, 0.6], "y": [-0.6, 0.6], "z": [0.3, 2.8] },
+      "hold_s": [0.8, 1.8],
+      "yaw_step_prob": 0.2,
+      "yaw_step_deg": [-60, 60]
+    },
+    {
+      "type": "hover",
+      "duration_s": 6.0,
+      "pos": [0, 0, 1.6],
+      "yaw_mode": "hold"
+    }
+  ],
+  "logging": { "format": "csv", "out_dir": "logs", "fields": "full" },
+  "telemetry": {
+    "enabled": true,
+    "rate_hz": 60,
+    "udp_host": "127.0.0.1",
+    "udp_port": 15000,
+    "payload": "pose_vel"
+  }
+}
