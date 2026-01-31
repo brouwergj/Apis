@@ -9,8 +9,8 @@ public class PythonControllerProcess : MonoBehaviour
     [Tooltip("Absolute path to python executable (e.g. python or python.exe)")]
     public string pythonExe = @"C:\Core\Apis\.venv\Scripts\python.exe";
 
-    [Tooltip("Absolute path to controller.py")]
-    public string controllerScriptPath = @"C:\Core\Apis\nuc\python\controller.py";
+    [Tooltip("Absolute path to runner.py")]
+    public string controllerScriptPath = @"C:\Core\Apis\nuc\python\runner.py";
 
     [Tooltip("Working directory for the process (optional)")]
     public string workingDirectory = @"C:\Core\Apis\nuc\python";
@@ -41,7 +41,7 @@ public class PythonControllerProcess : MonoBehaviour
 
         if (!File.Exists(controllerScriptPath))
         {
-            UnityEngine.Debug.LogError($"[PythonControllerProcess] controller.py not found: {controllerScriptPath}");
+            UnityEngine.Debug.LogError($"[PythonControllerProcess] runner.py not found: {controllerScriptPath}");
             return;
         }
 

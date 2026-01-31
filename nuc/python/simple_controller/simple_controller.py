@@ -1,4 +1,4 @@
-# simple_controller/simple_controller.py
+# simple_controller/simple_runner.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -19,7 +19,7 @@ def wrap_pi(a: float) -> float:
     return (a + math.pi) % (2 * math.pi) - math.pi
 
 
-# ---------- return type (duck-typed by controller.py) ----------
+# ---------- return type (duck-typed by runner.py) ----------
 
 @dataclass
 class ControlOut:

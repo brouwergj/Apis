@@ -1,4 +1,4 @@
-# controller.py
+# runner.py
 # - WebSocket control: receives one START JSON from Unity
 # - Runs one episode of a 3D toy quad + selected controller (toy or Crazyflie PID)
 # - Logs every sim tick to CSV
@@ -37,7 +37,7 @@ HOST = "127.0.0.1"
 PORT = 7361
 
 
-# controller.py (replace _select_controller with this)
+# runner.py (replace _select_controller with this)
 def _select_controller(cfg: Dict[str, Any], dt: float):
     ctrl_cfg = cfg.get("controller", {}) if isinstance(cfg, dict) else {}
     ctrl_type = str(ctrl_cfg.get("type", cfg.get("controller_type", "toy_controller"))).lower()
