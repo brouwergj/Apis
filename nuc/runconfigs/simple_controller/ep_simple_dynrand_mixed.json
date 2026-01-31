@@ -1,0 +1,47 @@
+{
+  "type": "START",
+  "run_id": "ep_simple_dynrand_mixed",
+  "real_time": true,
+  "seed": 505,
+  "dt": 0.01,
+  "duration_s": 30.0,
+  "init": {
+    "pos_box": { "x": [-0.4, 0.4], "y": [-0.4, 0.4], "z": [0.8, 1.2] },
+    "vel_box": { "x": [-0.1, 0.1], "y": [-0.1, 0.1], "z": [-0.1, 0.1] },
+    "yaw_deg": [0, 360]
+  },
+  "dynamics": {
+    "mass_range": [0.75, 1.35],
+    "drag_range": [0.04, 0.14],
+    "gravity": 9.81,
+    "wind": { "type": "none" }
+  },
+  "flight_plan": [
+    { "type": "hover", "duration_s": 2.0, "pos": [0, 0, 1.0], "yaw_mode": "hold" },
+    {
+      "type": "random_steps",
+      "duration_s": 18.0,
+      "bounds": { "x": [-2.0, 2.0], "y": [-2.0, 2.0], "z": [0.5, 2.2] },
+      "hold_s": [0.9, 2.0],
+      "yaw_step_prob": 0.35,
+      "yaw_step_deg": [-120, 120]
+    },
+    { "type": "circle", "duration_s": 10.0, "center": [0, 0, 1.2], "radius": 0.9, "omega": 0.75, "yaw_mode": "face_velocity" }
+  ],
+  "logging": { "format": "csv", "out_dir": "..\\\\logs\\\\simple_controller", "fields": "full" },
+  "telemetry": { "enabled": true, "rate_hz": 60, "udp_host": "127.0.0.1", "udp_port": 15000, "payload": "pose_vel" },
+  "controller": {
+    "type": "simple_controller",
+    "kp_pos": 1.9,
+    "kd_pos": 2.3,
+    "kp_yaw": 2.6,
+    "tilt_max_deg": 22.0,
+    "yaw_rate_max_dps": 150.0,
+    "thrust_min": 0.0,
+    "thrust_max": 30.0,
+    "roll_step_max_deg": 2.5,
+    "pitch_step_max_deg": 2.5,
+    "yaw_rate_step_max_dps": 18.0,
+    "thrust_step_max": 1.3
+  }
+}

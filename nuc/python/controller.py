@@ -30,18 +30,27 @@ from toy_controller.toy_controller import (
     ensure_dir,
 )
 from crazyflie_controller.crazyflie_controller import CrazyflieController
+from simple_controller.simple_controller import SimpleController
 
 
 HOST = "127.0.0.1"
 PORT = 7361
 
 
+# controller.py (replace _select_controller with this)
 def _select_controller(cfg: Dict[str, Any], dt: float):
     ctrl_cfg = cfg.get("controller", {}) if isinstance(cfg, dict) else {}
     ctrl_type = str(ctrl_cfg.get("type", cfg.get("controller_type", "toy_controller"))).lower()
-    if ctrl_type in ("crazyflie_controller", "crazyflie", "crazyflie_pid", "cf_pid", "cf"):
+
+    if ctrl_type in ("crazyflie_controller"):
         return "crazyflie_controller", CrazyflieController(ctrl_cfg, dt)
-    return "toy_controller", CascadedController(ctrl_cfg)
+
+    if ctrl_type in ("simple_controller"):
+        return "simple_controller", SimpleController(ctrl_cfg)
+
+    if ctrl_type in ("toy_controller"):
+        return "toy_controller", CascadedController(ctrl_cfg)
+
 
 
 def run_episode(cfg: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:

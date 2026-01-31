@@ -19,7 +19,7 @@ public class ControllerRunConfigSwitcher : MonoBehaviour
     public bool includeRootOption = false;
     public string rootLabel = "root";
 
-    [Tooltip("Optional hardcoded controller folder names under StreamingAssets.")]
+    [Tooltip("Optional hardcoded controller folder names under RunConfigs root.")]
     public string[] controllerFolders;
     [Tooltip("Folder names to exclude from the controller dropdown.")]
     public string[] excludedFolders = { "root", "toycontroller", "crazyflie_pid", "option_a", "optionA" };
@@ -90,7 +90,7 @@ public class ControllerRunConfigSwitcher : MonoBehaviour
         }
         else
         {
-            string baseDir = Application.streamingAssetsPath;
+            string baseDir = ResolveRunConfigsRoot();
             if (Directory.Exists(baseDir))
             {
                 var dirs = Directory.GetDirectories(baseDir)
@@ -115,6 +115,13 @@ public class ControllerRunConfigSwitcher : MonoBehaviour
         if (excludedFolders == null || excludedFolders.Length == 0)
             return false;
         return excludedFolders.Any(excluded => string.Equals(excluded, name, System.StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string ResolveRunConfigsRoot()
+    {
+        // Assets -> unity -> nuc -> runconfigs
+        string path = Path.Combine(Application.dataPath, "..", "..", "runconfigs");
+        return Path.GetFullPath(path);
     }
 
     private void OnControllerChanged(int index)

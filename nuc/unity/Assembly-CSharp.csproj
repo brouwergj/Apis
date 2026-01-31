@@ -57,7 +57,9 @@
     <Compile Include="Assets\Settings\RenderFeatures\EdgeDetection.cs" />
     <Compile Include="Assets\Thirdparty\Beam\Samples\Beam_DebugInfo.cs" />
     <Compile Include="Assets\Scripts\RunConfigCatalog.cs" />
+    <Compile Include="Assets\Scripts\LogReplayPlayer.cs" />
     <Compile Include="Assets\Scripts\ControllerOrchestrator.cs" />
+    <Compile Include="Assets\Scripts\LogReplayList.cs" />
     <Compile Include="Assets\Scripts\ControllerRunConfigSwitcher.cs" />
     <Compile Include="Assets\Thirdparty\Beam\Samples\Beam_Rotator.cs" />
     <Compile Include="Assets\Scripts\SendJsonFileToPythonOnAction.cs" />
@@ -66,6 +68,7 @@
     <Compile Include="Assets\Scripts\TelemetryPoseApplier.cs" />
     <Compile Include="Assets\Scripts\PythonControllerProcess.cs" />
     <Compile Include="Assets\Scripts\RunConfigDropdownPopulator.cs" />
+    <Compile Include="Assets\Scripts\LogReplayListItem.cs" />
     <Compile Include="Assets\Scripts\ControllerState.cs" />
     <Compile Include="Assets\Scripts\UdpTelemetryReceiver.cs" />
     <Compile Include="Assets\Thirdparty\Beam\Runtime\Resources\Beam\Shaders\Beam_Constants.cs" />

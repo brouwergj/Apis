@@ -11,10 +11,10 @@ public class RunConfigCatalog : MonoBehaviour
         if (!printOnStart)
             return;
 
-        string dir = Application.streamingAssetsPath;
+        string dir = ResolveRunConfigsRoot();
         if (!Directory.Exists(dir))
         {
-            Debug.LogWarning($"[RunConfigCatalog] StreamingAssets folder not found: {dir}");
+            Debug.LogWarning($"[RunConfigCatalog] RunConfigs folder not found: {dir}");
             return;
         }
 
@@ -24,5 +24,12 @@ public class RunConfigCatalog : MonoBehaviour
         {
             Debug.Log($"[RunConfigCatalog] {Path.GetFileName(path)}");
         }
+    }
+
+    private string ResolveRunConfigsRoot()
+    {
+        // Assets -> unity -> nuc -> runconfigs
+        string path = Path.Combine(Application.dataPath, "..", "..", "runconfigs");
+        return Path.GetFullPath(path);
     }
 }

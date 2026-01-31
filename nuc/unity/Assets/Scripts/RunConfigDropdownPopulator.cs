@@ -9,11 +9,13 @@ public class RunConfigDropdownPopulator : MonoBehaviour
     public TMP_Dropdown dropdown;
 
     [Header("Search")]
-    [Tooltip("Optional subfolder under StreamingAssets (e.g., \"toy_controller\"). Leave empty for root.")]
+    [Tooltip("Optional root folder override. Leave empty to use default RunConfigs root.")]
+    public string runConfigsRoot = "";
+    [Tooltip("Optional subfolder under RunConfigs root (e.g., \"toy_controller\"). Leave empty for root.")]
     public string subfolder = "";
 
     [Header("Options")]
-    public bool populateOnStart = true;
+    public bool populateOnStart = false;
     public bool printOnStart = true;
     public bool includePathInLog = false;
     public bool includeSubfolderInLabel = true;
@@ -35,13 +37,13 @@ public class RunConfigDropdownPopulator : MonoBehaviour
 
     public void Populate()
     {
-        string baseDir = Application.streamingAssetsPath;
+        string baseDir = ResolveRunConfigsRoot();
         string dir = string.IsNullOrWhiteSpace(subfolder)
             ? baseDir
             : Path.Combine(baseDir, subfolder);
         if (!Directory.Exists(dir))
         {
-            Debug.LogWarning($"[RunConfigDropdownPopulator] StreamingAssets folder not found: {dir}");
+            Debug.LogWarning($"[RunConfigDropdownPopulator] RunConfigs folder not found: {dir}");
             RunConfigPaths = new string[0];
             RunConfigRelativePaths = new string[0];
             if (dropdown != null)
@@ -128,5 +130,15 @@ public class RunConfigDropdownPopulator : MonoBehaviour
         var fileUri = new System.Uri(fullPath);
         return System.Uri.UnescapeDataString(baseUri.MakeRelativeUri(fileUri).ToString())
             .Replace('/', Path.DirectorySeparatorChar);
+    }
+
+    private string ResolveRunConfigsRoot()
+    {
+        if (!string.IsNullOrWhiteSpace(runConfigsRoot))
+            return runConfigsRoot;
+
+        // Assets -> unity -> nuc -> runconfigs
+        string path = Path.Combine(Application.dataPath, "..", "..", "runconfigs");
+        return Path.GetFullPath(path);
     }
 }

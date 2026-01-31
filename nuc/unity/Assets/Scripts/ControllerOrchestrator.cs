@@ -11,13 +11,15 @@ public class ControllerOrchestrator : MonoBehaviour
     [Header("Dependencies")]
     public PythonControllerProcess pythonProcess;
     public UnityControlClient wsClient;
+    public LogReplayPlayer replayPlayer;
 
     [Header("Input Actions")]
     public InputActionReference startControllerAction;   // e.g. UI/StartController
     public InputActionReference startSimAction;          // e.g. UI/StartSimulation
 
     [Header("RunConfig JSON")]
-    public string runConfigFileName = "RunConfig.json";  // in StreamingAssets
+    private string runConfigsRoot = "";
+    private string runConfigFileName = "RunConfig.json";  // relative to runconfigs root
     public bool readReply = true;
 
     [Header("RunConfig Dropdown (TMP)")]
@@ -40,6 +42,7 @@ public class ControllerOrchestrator : MonoBehaviour
     private bool _startingController;
     private bool _startingSim;
     private bool _hasUserSelectedRunConfig;
+    private bool _stopRequested;
 
     [Serializable]
     private class ControllerReply
@@ -69,6 +72,7 @@ public class ControllerOrchestrator : MonoBehaviour
     public string CurrentControllerLabel { get; private set; } = "";
     public int BatchIndex { get; private set; } = 0;
     public int BatchTotal { get; private set; } = 0;
+    public bool IsReplayMode { get; private set; } = false;
 
     private void OnEnable()
     {
@@ -150,6 +154,8 @@ public class ControllerOrchestrator : MonoBehaviour
     {
         if (_startingController) return;
         _startingController = true;
+        _stopRequested = false;
+        IsReplayMode = false;
 
         try
         {
@@ -169,6 +175,8 @@ public class ControllerOrchestrator : MonoBehaviour
     {
         if (_startingSim) return;
         _startingSim = true;
+        _stopRequested = false;
+        IsReplayMode = false;
 
         try
         {
@@ -196,6 +204,9 @@ public class ControllerOrchestrator : MonoBehaviour
         State = ControllerState.Starting;
         LastStatusMessage = "Starting controller process...";
 
+        if (_stopRequested)
+            return;
+
         if (pythonProcess == null || wsClient == null)
             throw new InvalidOperationException("pythonProcess or wsClient not assigned.");
 
@@ -211,6 +222,13 @@ public class ControllerOrchestrator : MonoBehaviour
         float start = Time.realtimeSinceStartup;
         while (Time.realtimeSinceStartup - start < maxWaitSeconds)
         {
+            if (_stopRequested)
+            {
+                LastStatusMessage = "Start cancelled";
+                State = ControllerState.Stopped;
+                return;
+            }
+
             bool ok = await wsClient.TryConnectAsync(quiet: true);
             if (ok)
             {
@@ -236,6 +254,9 @@ public class ControllerOrchestrator : MonoBehaviour
 
     private async Task SendRunConfigInternal(bool bypassSelection)
     {
+        if (_stopRequested)
+            return;
+
         if (!bypassSelection)
         {
             EnsureRunConfigSelection();
@@ -247,7 +268,7 @@ public class ControllerOrchestrator : MonoBehaviour
             }
         }
 
-        string path = Path.Combine(Application.streamingAssetsPath, runConfigFileName);
+        string path = Path.Combine(ResolveRunConfigsRoot(), runConfigFileName);
         if (!File.Exists(path))
             throw new FileNotFoundException($"RunConfig not found: {path}");
 
@@ -268,6 +289,15 @@ public class ControllerOrchestrator : MonoBehaviour
             // Listen until DONE or socket closes.
             while (true)
             {
+                if (_stopRequested)
+                {
+                    LastStatusMessage = "Stopped";
+                    IsControllerReady = false;
+                    State = ControllerState.Stopped;
+                    await wsClient.DisconnectAsync();
+                    break;
+                }
+
                 string msg = await wsClient.ReceiveTextAsync();
                 Debug.Log($"[ControllerOrchestrator] WS msg: {msg}");
 
@@ -320,6 +350,8 @@ public class ControllerOrchestrator : MonoBehaviour
     {
         if (_startingController) return;
         _startingController = true;
+        _stopRequested = false;
+        IsReplayMode = false;
 
         _ = StartControllerAndWaitUntilReady()
             .ContinueWith(t =>
@@ -333,6 +365,8 @@ public class ControllerOrchestrator : MonoBehaviour
         if (_startingSim) return;
 
         _startingSim = true;
+        _stopRequested = false;
+        IsReplayMode = false;
 
         _ = StartSimulationAsync()
             .ContinueWith(t =>
@@ -381,6 +415,9 @@ public class ControllerOrchestrator : MonoBehaviour
         BatchTotal = configs.Length;
         for (int i = 0; i < configs.Length; i++)
         {
+            if (_stopRequested)
+                break;
+
             runConfigFileName = configs[i];
             CurrentRunConfigLabel = runConfigFileName;
             _hasUserSelectedRunConfig = true;
@@ -484,6 +521,54 @@ public class ControllerOrchestrator : MonoBehaviour
             LastStatusMessage = $"Controller selected: {CurrentControllerLabel}";
     }
 
+    public void UI_StopAll()
+    {
+        _ = StopAllAsync();
+    }
+
+    public void SetReplayMode(bool isReplayMode)
+    {
+        IsReplayMode = isReplayMode;
+        if (IsReplayMode)
+        {
+            State = ControllerState.Stopped;
+            LastStatusMessage = "Replay Mode";
+        }
+    }
+
+    private async Task StopAllAsync()
+    {
+        _stopRequested = true;
+        _startingController = false;
+        _startingSim = false;
+
+        BatchIndex = 0;
+        BatchTotal = 0;
+        IsControllerReady = false;
+        IsReplayMode = false;
+        State = ControllerState.Stopped;
+        LastStatusMessage = "Stopped";
+
+        if (runAllConfigsToggle != null)
+        {
+            runAllConfigsToggle.SetIsOnWithoutNotify(false);
+            runAllConfigs = false;
+        }
+        else
+        {
+            runAllConfigs = false;
+        }
+
+        if (replayPlayer != null)
+            replayPlayer.Stop();
+
+        if (wsClient != null)
+            await wsClient.DisconnectAsync();
+
+        if (pythonProcess != null)
+            pythonProcess.StopController();
+    }
+
     private async Task WaitForControllerExit()
     {
         if (pythonProcess == null)
@@ -494,6 +579,16 @@ public class ControllerOrchestrator : MonoBehaviour
         {
             await Task.Delay(TimeSpan.FromMilliseconds(50));
         }
+    }
+
+    private string ResolveRunConfigsRoot()
+    {
+        if (!string.IsNullOrWhiteSpace(runConfigsRoot))
+            return runConfigsRoot;
+
+        // Assets -> unity -> nuc -> runconfigs
+        string path = Path.Combine(Application.dataPath, "..", "..", "runconfigs");
+        return Path.GetFullPath(path);
     }
 
 }

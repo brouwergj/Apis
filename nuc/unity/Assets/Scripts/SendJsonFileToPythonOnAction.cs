@@ -14,7 +14,9 @@ public class SendJsonFileToPythonOnAction : MonoBehaviour
     public InputActionReference sendAction;
 
     [Header("JSON File")]
-    [Tooltip("Filename inside StreamingAssets (e.g., RunConfig.json).")]
+    [Tooltip("Optional root folder override. Leave empty to use default RunConfigs root.")]
+    public string runConfigsRoot = "";
+    [Tooltip("Filename relative to runconfigs root (e.g., toy_controller/ep_vertical_focus.json).")]
     public string fileName = "RunConfig.json";
 
     [Header("Options")]
@@ -65,7 +67,7 @@ public class SendJsonFileToPythonOnAction : MonoBehaviour
         if (controlClient == null)
             throw new InvalidOperationException("controlClient is not assigned.");
 
-        string path = Path.Combine(Application.streamingAssetsPath, fileName);
+        string path = Path.Combine(ResolveRunConfigsRoot(), fileName);
 
         if (!File.Exists(path))
             throw new FileNotFoundException($"JSON config file not found: {path}");
@@ -78,5 +80,15 @@ public class SendJsonFileToPythonOnAction : MonoBehaviour
 
         Debug.Log($"[SendJsonFileToPythonOnAction] Sending {fileName} ({json.Length} chars) ...");
         await controlClient.SendTextAsync(json, readReply: readReply);
+    }
+
+    private string ResolveRunConfigsRoot()
+    {
+        if (!string.IsNullOrWhiteSpace(runConfigsRoot))
+            return runConfigsRoot;
+
+        // Assets -> unity -> nuc -> runconfigs
+        string path = Path.Combine(Application.dataPath, "..", "..", "runconfigs");
+        return Path.GetFullPath(path);
     }
 }

@@ -4,17 +4,20 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class LogReplayList : MonoBehaviour
 {
     [Header("UI")]
     public RectTransform contentRoot;
-    public Button itemButtonPrefab;
+    public ScrollRect scrollRect;
+    public ToggleGroup toggleGroup;
+    public LogReplayListItem itemPrefab;
 
     [Header("Replay")]
     public LogReplayPlayer replayPlayer;
     public Button replayButton;
+    public Button refreshButton;
+    public ControllerOrchestrator orchestrator;
 
     [Header("Log Sources")]
     public string logsRoot = ""; // optional override
@@ -22,11 +25,8 @@ public class LogReplayList : MonoBehaviour
 
     [Header("Refresh")]
     public bool populateOnStart = true;
-    public bool pollForChanges = true;
-    public float pollIntervalSeconds = 1.0f;
-
-    private float _nextPollTime = 0f;
     private List<string> _currentFiles = new List<string>();
+    private readonly List<LogReplayListItem> _items = new List<LogReplayListItem>();
     private string _selectedPath = "";
 
     private void Start()
@@ -36,18 +36,9 @@ public class LogReplayList : MonoBehaviour
 
         if (replayButton != null)
             replayButton.onClick.AddListener(UI_ReplaySelected);
-    }
 
-    private void Update()
-    {
-        if (!pollForChanges)
-            return;
-
-        if (Time.realtimeSinceStartup < _nextPollTime)
-            return;
-
-        _nextPollTime = Time.realtimeSinceStartup + pollIntervalSeconds;
-        RefreshList();
+        if (refreshButton != null)
+            refreshButton.onClick.AddListener(RefreshList);
     }
 
     public void RefreshList()
@@ -68,7 +59,11 @@ public class LogReplayList : MonoBehaviour
             string dir = Path.Combine(root, folder);
             if (!Directory.Exists(dir))
                 continue;
-            files.AddRange(Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly));
+            var folderFiles = Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly);
+            Debug.Log($"[LogReplayList] Found {folderFiles.Length} log(s) in {dir}");
+            foreach (var file in folderFiles)
+                Debug.Log($"[LogReplayList] {Path.GetFileName(file)}");
+            files.AddRange(folderFiles);
         }
 
         files = files.OrderByDescending(File.GetLastWriteTimeUtc).ToList();
@@ -76,6 +71,7 @@ public class LogReplayList : MonoBehaviour
         if (IsSameList(files, _currentFiles))
             return;
 
+        Debug.Log($"[LogReplayList] Total logs: {files.Count}");
         _currentFiles = files;
         RebuildList(files);
     }
@@ -84,32 +80,52 @@ public class LogReplayList : MonoBehaviour
     {
         ClearList();
 
-        if (contentRoot == null || itemButtonPrefab == null)
+        EnsureContentRoot();
+        EnsureToggleGroup();
+        if (contentRoot == null || itemPrefab == null)
+        {
+            Debug.LogWarning($"[LogReplayList] Missing UI refs. contentRoot={(contentRoot != null)}, itemPrefab={(itemPrefab != null)}");
             return;
+        }
 
         foreach (var path in files)
         {
-            var btn = Instantiate(itemButtonPrefab, contentRoot);
-            var label = btn.GetComponentInChildren<TextMeshProUGUI>();
-            if (label != null)
-            {
-                label.text = Path.GetFileName(path);
-            }
+            var item = Instantiate(itemPrefab, contentRoot);
+            item.Init(path);
+            _items.Add(item);
 
-            btn.onClick.AddListener(() => OnItemSelected(path));
+            if (item.toggle != null)
+            {
+                item.toggle.group = toggleGroup;
+                item.toggle.onValueChanged.AddListener(isOn => OnItemToggleChanged(item, isOn));
+            }
         }
 
         if (files.Count > 0)
         {
-            OnItemSelected(files[0]);
+            SelectItem(_items[0], true);
         }
     }
 
-    private void OnItemSelected(string path)
+    private void OnItemToggleChanged(LogReplayListItem item, bool isOn)
     {
-        _selectedPath = path;
-        if (replayPlayer != null)
-            replayPlayer.LoadLog(path);
+        if (!isOn)
+            return;
+
+        SelectItem(item, false);
+    }
+
+    private void SelectItem(LogReplayListItem item, bool forceToggleOn)
+    {
+        if (item == null)
+            return;
+
+        if (forceToggleOn && item.toggle != null && !item.toggle.isOn)
+            item.toggle.SetIsOnWithoutNotify(true);
+
+        _selectedPath = item.Path;
+        if (replayPlayer != null && !string.IsNullOrWhiteSpace(_selectedPath))
+            replayPlayer.LoadLog(_selectedPath);
     }
 
     public void UI_ReplaySelected()
@@ -125,10 +141,14 @@ public class LogReplayList : MonoBehaviour
 
         replayPlayer.LoadLog(_selectedPath);
         replayPlayer.Replay();
+
+        if (orchestrator != null)
+            orchestrator.SetReplayMode(true);
     }
 
     private void ClearList()
     {
+        EnsureContentRoot();
         if (contentRoot == null)
             return;
 
@@ -136,6 +156,41 @@ public class LogReplayList : MonoBehaviour
         {
             Destroy(contentRoot.GetChild(i).gameObject);
         }
+        _items.Clear();
+    }
+
+    private void EnsureContentRoot()
+    {
+        if (scrollRect != null)
+        {
+            if (scrollRect.content != null)
+            {
+                contentRoot = scrollRect.content;
+                return;
+            }
+        }
+
+        if (contentRoot == null)
+            return;
+
+        // If contentRoot points to a ScrollRect or its viewport, prefer the ScrollRect content.
+        var sr = contentRoot.GetComponent<ScrollRect>();
+        if (sr != null && sr.content != null)
+        {
+            contentRoot = sr.content;
+        }
+    }
+
+    private void EnsureToggleGroup()
+    {
+        if (toggleGroup != null)
+            return;
+
+        if (contentRoot != null)
+            toggleGroup = contentRoot.GetComponent<ToggleGroup>();
+
+        if (toggleGroup == null && contentRoot != null)
+            toggleGroup = contentRoot.gameObject.AddComponent<ToggleGroup>();
     }
 
     private string ResolveLogsRoot()
